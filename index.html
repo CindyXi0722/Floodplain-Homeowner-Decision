@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flood Insurance vs. Raising the House</title>
+<meta name="description" content="An interactive comparison of the 10-year cost of flood insurance versus elevating a home in a floodplain.">
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --card: #ffffff;
+    --ink: #1f2933;
+    --muted: #5b6672;
+    --line: #dcd8cf;
+    --grid: #ebe8e1;
+    --ins: #2563a8;      /* insurance */
+    --elev: #c2621b;     /* raise the house */
+    --none: #8a8f96;     /* do nothing */
+    --accent-bg: #eef3f9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14181d; --card: #1d232a; --ink: #e6e9ec; --muted: #9aa5b1;
+      --line: #313a44; --grid: #262e37; --ins: #6aa6e8; --elev: #f0954f;
+      --none: #8d96a0; --accent-bg: #1c2836;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181d; --card: #1d232a; --ink: #e6e9ec; --muted: #9aa5b1;
+    --line: #313a44; --grid: #262e37; --ins: #6aa6e8; --elev: #f0954f;
+    --none: #8d96a0; --accent-bg: #1c2836;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: clamp(1.7rem, 4.5vw, 2.4rem); line-height: 1.2; margin: 0 0 12px; letter-spacing: -0.01em; }
+  h2 { font-size: 1.25rem; margin: 0 0 6px; }
+  h3 { font-size: 1rem; margin: 18px 0 6px; }
+  p { margin: 0 0 12px; }
+  .lede { font-size: 1.07rem; color: var(--ink); max-width: 70ch; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.88rem; }
+  section.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px; margin-top: 22px;
+  }
+  .ins { color: var(--ins); font-weight: 600; }
+  .elev { color: var(--elev); font-weight: 600; }
+  .none { color: var(--none); font-weight: 600; }
+
+  /* Chart */
+  #chart { width: 100%; height: auto; display: block; margin-top: 8px; }
+  #chart text { fill: var(--muted); font-size: 12px; font-family: inherit; }
+  #chart .axis-title { fill: var(--ink); font-size: 13px; font-weight: 600; }
+  #chart .end-label { font-size: 13px; font-weight: 700; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.9rem; margin-top: 4px; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 18px; height: 3px; margin-right: 6px;
+    vertical-align: middle; background: currentColor; border-radius: 2px;
+  }
+  .legend .none::before { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px); }
+
+  /* Sliders */
+  .sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 28px; margin-top: 8px; }
+  @media (max-width: 680px) { .sliders { grid-template-columns: 1fr; } }
+  .slider-group h3 { margin-top: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .control { margin-bottom: 16px; }
+  .control label { display: flex; justify-content: space-between; gap: 10px; font-weight: 600; }
+  .control output { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+  .control .hint { font-size: 0.85rem; color: var(--muted); margin: 2px 0 0; }
+  input[type=range] { width: 100%; margin: 8px 0 2px; accent-color: var(--ink); }
+  input[type=range].ins-range { accent-color: var(--ins); }
+  input[type=range].elev-range { accent-color: var(--elev); }
+  input[type=range]:disabled { opacity: 0.45; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9rem; margin-top: 6px; }
+  .check input { margin-top: 4px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 520px; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+  tr.total td { font-weight: 800; border-top: 2px solid var(--ink); border-bottom: none; font-size: 1.05rem; }
+  td.best { background: var(--accent-bg); }
+  .verdict { background: var(--accent-bg); border-radius: 8px; padding: 12px 14px; margin-top: 14px; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  @media (max-width: 680px) { .facts { grid-template-columns: 1fr; } }
+  .fact { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .fact b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+
+  /* Formulas */
+  .formula { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86rem;
+    background: var(--accent-bg); border-radius: 6px; padding: 8px 10px; margin: 6px 0 10px; overflow-x: auto; white-space: pre; }
+  ul { padding-left: 20px; margin: 6px 0 12px; }
+  li { margin-bottom: 4px; }
+  a { color: var(--ins); }
+  footer { margin-top: 28px; font-size: 0.85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- ===== TITLE + INTRO ===== -->
+  <header>
+    <h1>How Homeowner's Decision Impact Disaster Recovery</h1>
+    <p class="lede">
+      A homeowner living in a floodplain has two main ways to protect themselves:
+      <span class="ins">buy flood insurance</span> (pay a premium every year, and the insurer pays for most of the
+      damage after a flood), or <span class="elev">raise the house</span> (pay a large one-time construction bill to lift
+      the home so floodwater flows underneath it). Insurance doesn't stop the water, but it pays for the repairs so the
+      family can rebuild. Raising the house stops most of the damage from happening in the first place.
+    </p>
+    <p class="lede">
+      A yearly premium can't be compared fairly with a one-time construction bill, so this page adds up the
+      <strong>total expected cost over 10 years</strong> for each choice, including the flood damage the homeowner
+      would still have to pay for out of pocket. Move the sliders to see which choice costs less, and when.
+    </p>
+  </header>
+
+  <!-- ===== GRAPH ===== -->
+  <section class="card" aria-labelledby="chart-title">
+    <h2 id="chart-title">Total expected cost over 10 years</h2>
+    <p class="muted small">Running total of what the homeowner spends, in U.S. dollars, from the day they decide (year 0) to year 10.
+      Each line includes the protection cost <em>plus</em> the flood damage they would still expect to pay themselves.</p>
+    <div class="legend" aria-hidden="true">
+      <span class="ins">Buy flood insurance</span>
+      <span class="elev">Raise the house</span>
+      <span class="none">Do nothing (for reference)</span>
+    </div>
+    <svg id="chart" viewBox="0 0 860 400" role="img" aria-label="Line chart of cumulative 10-year cost for each option"></svg>
+
+    <!-- ===== SLIDERS (below the graph) ===== -->
+    <div class="sliders">
+      <div class="slider-group">
+        <h3>The two decisions</h3>
+
+        <div class="control">
+          <label for="premium"><span class="ins">Flood insurance premium</span><output id="premiumOut"></output></label>
+          <input type="range" id="premium" class="ins-range" min="300" max="6000" step="50" value="1800">
+          <p class="hint">What the homeowner pays each year. Over 10 years that's <b id="premium10"></b> in premiums.</p>
+          <label class="check"><input type="checkbox" id="linkPremium">
+            <span>Let the insurer price my risk (the premium follows the flood sliders, like FEMA's Risk Rating 2.0)</span></label>
+        </div>
+
+        <div class="control">
+          <label for="elevCost"><span class="elev">Cost to raise the house</span><output id="elevCostOut"></output></label>
+          <input type="range" id="elevCost" class="elev-range" min="20000" max="200000" step="1000" value="60000">
+          <p class="hint">One-time cost to lift the house about 6 ft and put it on a new, stronger foundation (piers or raised walls).</p>
+        </div>
+      </div>
+
+      <div class="slider-group">
+        <h3>The flood hazard</h3>
+
+        <div class="control">
+          <label for="chance">Chance of a flood in any year<output id="chanceOut"></output></label>
+          <input type="range" id="chance" min="0.5" max="10" step="0.5" value="2">
+          <p class="hint">1% is the official "100-year flood" line. Homes deeper in the floodplain flood more often.</p>
+        </div>
+
+        <div class="control">
+          <label for="depth">How deep the water gets<output id="depthOut"></output></label>
+          <input type="range" id="depth" min="0.5" max="10" step="0.5" value="3">
+          <p class="hint">Water depth above the first floor of the house as it sits today. Deeper water means more ruined walls,
+            floors, wiring and appliances: <b id="damageHint"></b>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== COMPARISON TABLE ===== -->
+  <section class="card" aria-labelledby="cmp-title">
+    <h2 id="cmp-title">Side-by-side: what each choice costs over 10 years</h2>
+    <p class="muted small">All values in U.S. dollars, for a house worth $250,000 to rebuild. "Expected" means the average over many possible
+      10-year periods: some homeowners will flood more often, some never.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Cost item (10 years)</th><th class="ins">Buy insurance</th><th class="elev">Raise the house</th><th class="none">Do nothing</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Up-front construction</td><td id="t-ins-up"></td><td id="t-elev-up"></td><td id="t-none-up"></td></tr>
+          <tr><td>Insurance premiums</td><td id="t-ins-prem"></td><td id="t-elev-prem"></td><td id="t-none-prem"></td></tr>
+          <tr><td>Flood damage paid out of pocket (expected)</td><td id="t-ins-loss"></td><td id="t-elev-loss"></td><td id="t-none-loss"></td></tr>
+          <tr><td>Damage from one flood, paid by the homeowner</td><td id="t-ins-one"></td><td id="t-elev-one"></td><td id="t-none-one"></td></tr>
+          <tr class="total"><td>10-year total</td><td id="t-ins-tot"></td><td id="t-elev-tot"></td><td id="t-none-tot"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="verdict" id="verdict" aria-live="polite"></div>
+    <div class="facts">
+      <div class="fact"><span class="small muted">Chance of at least one flood in 10 years</span><b id="f-atleast"></b></div>
+      <div class="fact"><span class="small muted">Repair bill from one flood (unprotected)</span><b id="f-onebill"></b></div>
+      <div class="fact"><span class="small muted">Year when raising the house pays off</span><b id="f-breakeven"></b></div>
+    </div>
+  </section>
+
+  <!-- ===== WHAT TO NOTICE ===== -->
+  <section class="card" aria-labelledby="notice-title">
+    <h2 id="notice-title">What to notice when you move the sliders</h2>
+    <ul>
+      <li><b>The flood sliders work together.</b> Damage depends on <em>how often</em> it floods times <em>how bad</em> each flood is.
+        A 10% yearly chance of 1 ft of water costs far less than a 10% chance of 6 ft. Watch the gray "do nothing" line: it only climbs
+        steeply when <em>both</em> sliders are high.</li>
+      <li><b>Raising the house only "turns on" for deep water.</b> With the house lifted ~6 ft, a 3 ft flood passes underneath and causes
+        no damage, so the orange line stays flat no matter how often it floods. Push the depth past about 5 ft and the orange line
+        starts to rise, because the water now reaches the raised floor.</li>
+      <li><b>Insurance shifts the loss; it doesn't remove it.</b> With a fixed premium, the blue line barely changes when you move the flood
+        sliders. The insurer pays the repair bill, and the homeowner pays only the deductible. Check the box to let the insurer
+        price the risk, and the premium jumps as floods get more likely or deeper. That's how real risk-based pricing works.</li>
+      <li><b>Time matters.</b> Insurance is cheap at first and grows every year. Raising the house is expensive on day one and almost free
+        afterward. In 10 years, insurance usually wins at moderate risk. Raise the flood chance or depth, or turn on risk pricing,
+        and the break-even year moves earlier.</li>
+      <li><b>Recovery.</b> Look at the row "damage from one flood, paid by the homeowner." Without protection, one flood can cost
+        a family tens of thousands of dollars at once, often more than their savings. Either option turns that into
+        a manageable, predictable cost, and that is what makes recovery after a disaster possible.</li>
+    </ul>
+  </section>
+
+  <!-- ===== WHERE THE NUMBERS COME FROM ===== -->
+  <section class="card" aria-labelledby="src-title">
+    <h2 id="src-title">Where the numbers come from</h2>
+    <ul class="small">
+      <li><b>Insurance premium ($300–$6,000 per year, default $1,800).</b> The average National Flood Insurance Program (NFIP) policy
+        costs about $786 per year nationally (2023 data, <a href="https://www.kiplinger.com/personal-finance/home-insurance/how-much-does-flood-insurance-cost">Kiplinger</a>),
+        but homes inside high-risk flood zones pay more. Under FEMA's <a href="https://www.everycrsreport.com/reports/R45999.html">Risk Rating 2.0</a>
+        (since 2021–2022), each home's premium is based on its own flood risk, and full-risk premiums in high-risk zones commonly reach several
+        thousand dollars per year.</li>
+      <li><b>Cost to raise the house ($20,000–$200,000, default $60,000).</b> Typical costs to lift a house run about $25,000–$100,000,
+        with a national average near $50,000 for a 1,500 sq ft wood-frame home raised 6 ft, or roughly $14–$60 per sq ft including the new
+        foundation (<a href="https://www.fixr.com/costs/cost-to-raise-a-house">Fixr</a>). Larger, brick or slab homes can cost well over
+        $100,000 (<a href="https://www.texastribune.org/2018/03/14/harvey-elevate-homes-flood-houston-money-costs/">Texas Tribune, after Hurricane Harvey</a>).</li>
+      <li><b>Flood chance (0.5%–10% per year, default 2%).</b> FEMA's high-risk "Special Flood Hazard Area" is land with at least a 1% chance
+        of flooding each year (the "100-year flood"). FEMA notes this is about a 26% chance over a 30-year mortgage. Homes closer to a river or coast
+        can flood much more often.</li>
+      <li><b>Damage vs. depth.</b> The percent of the house destroyed at each water depth comes from the U.S. Army Corps of Engineers
+        depth-damage curve for a one-story house without a basement (USACE Economic Guidance Memorandum 04-01). For example, 1 ft of water
+        ruins about 23% of the house's value, 3 ft about 40%, and 6 ft about 59%.</li>
+      <li><b>Other assumptions.</b> House rebuild value $250,000 (the NFIP's maximum building coverage, so the policy covers the full house);
+        insurance deductible $2,000 (NFIP offers $1,000–$10,000); raising lifts the floor 6 ft; risk-based premium = expected yearly claim × 1.3
+        to cover the insurer's costs (an illustrative assumption). The model ignores contents, inflation and interest, and counts at most one
+        flood per year.</li>
+      <li><b>A real-world note.</b> In a high-risk zone, a federally backed mortgage requires flood insurance. Many homeowners who raise their
+        house still keep a policy, which becomes much cheaper once the house is elevated. This page treats the two as separate choices so the
+        trade-off is easy to see.</li>
+    </ul>
+  </section>
+
+  <!-- ===== FORMULAS ===== -->
+  <section class="card" aria-labelledby="calc-title">
+    <h2 id="calc-title">How the costs are calculated</h2>
+    <p class="small">Let <b>p</b> = yearly flood chance, <b>d</b> = water depth (ft), <b>V</b> = $250,000 house value,
+      <b>D(x)</b> = fraction of the house damaged by <i>x</i> ft of water above the floor (USACE curve), and <b>T</b> = 10 years.</p>
+    <div class="formula">Damage from one flood (house as it is)  L  = D(d) × V
+Damage from one flood (raised 6 ft)    Lr = D(d − 6) × V</div>
+    <div class="formula"><span class="ins">Insurance</span>  10-yr cost = Premium × T  +  p × T × min(L, Deductible)</div>
+    <div class="formula"><span class="elev">Raise house</span> 10-yr cost = Elevation cost  +  p × T × Lr</div>
+    <div class="formula"><span class="none">Do nothing</span>  10-yr cost = p × T × L</div>
+    <div class="formula">Risk-based premium ≈ 1.3 × p × (L − Deductible)
+Chance of ≥1 flood in T years = 1 − (1 − p)^T
+Break-even year = Elevation cost ÷ (yearly cost of insurance − yearly expected damage when raised)</div>
+    <p class="small muted" id="liveCalc"></p>
+  </section>
+
+  <footer>Built for a course project on insurance and disaster recovery. Numbers are educational estimates, not a quote or financial advice.</footer>
+</main>
+
+<script>
+(function () {
+  // ---- Fixed assumptions ----
+  const V = 250000;          // rebuild value of house ($)
+  const DEDUCT = 2000;       // NFIP deductible ($)
+  const LIFT = 6;            // feet the house is raised
+  const T = 10;              // years compared
+  const LOAD = 1.3;          // insurer overhead factor for risk-based premium
+
+  // USACE EGM 04-01, one-story, no basement: depth above first floor (ft) -> % damage
+  const curve = [[-2,0],[-1,2.5],[0,13.4],[1,23.3],[2,32.1],[3,40.1],[4,47.1],[5,53.2],[6,58.6],[7,63.2],[8,67.2],[9,70.5],[10,73.2]];
+  function damageFrac(x) {
+    if (x <= curve[0][0]) return 0;
+    if (x >= curve[curve.length-1][0]) return curve[curve.length-1][1] / 100;
+    for (let i = 0; i < curve.length - 1; i++) {
+      const [x0,y0] = curve[i], [x1,y1] = curve[i+1];
+      if (x >= x0 && x <= x1) return (y0 + (y1 - y0) * (x - x0) / (x1 - x0)) / 100;
+    }
+    return 0;
+  }
+
+  const $ = id => document.getElementById(id);
+  const money = n => "$" + Math.round(n).toLocaleString("en-US");
+  const short = n => n >= 1e6 ? "$" + (n/1e6).toFixed(1) + "M" : n >= 1000 ? "$" + Math.round(n/1000) + "k" : "$" + Math.round(n);
+
+  const els = { premium: $("premium"), elevCost: $("elevCost"), chance: $("chance"), depth: $("depth"), link: $("linkPremium") };
+
+  function model() {
+    const p = +els.chance.value / 100;
+    const d = +els.depth.value;
+    const L  = damageFrac(d) * V;           // one-flood loss, unprotected
+    const Lr = damageFrac(d - LIFT) * V;    // one-flood loss, raised
+    const riskPremium = Math.max(300, Math.round(LOAD * p * Math.max(0, L - DEDUCT) / 50) * 50);
+    if (els.link.checked) els.premium.value = Math.min(+els.premium.max, riskPremium);
+    const prem = +els.premium.value;
+    const elev = +els.elevCost.value;
+
+    const insOOP = Math.min(L, DEDUCT);     // homeowner pays per flood when insured
+    const insYear = prem + p * insOOP;
+    const elevYear = p * Lr;
+    const noneYear = p * L;
+
+    const series = { ins: [], elev: [], none: [] };
+    for (let y = 0; y <= T; y++) {
+      series.ins.push(insYear * y);
+      series.elev.push(elev + elevYear * y);
+      series.none.push(noneYear * y);
+    }
+    const breakeven = insYear > elevYear ? elev / (insYear - elevYear) : Infinity;
+    return { p, d, L, Lr, prem, elev, insOOP, insYear, elevYear, noneYear, series, breakeven, riskPremium };
+  }
+
+  // ---- Chart ----
+  const svg = $("chart");
+  const W = 860, H = 400, m = { l: 78, r: 120, t: 16, b: 52 };
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    svg.appendChild(e); return e;
+  }
+  function niceMax(v) {
+    if (v <= 0) return 1000;
+    const mag = Math.pow(10, Math.floor(Math.log10(v)));
+    for (const s of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (s * mag >= v) return s * mag;
+    return 10 * mag;
+  }
+  function draw(r) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const css = getComputedStyle(document.documentElement);
+    const C = { ins: css.getPropertyValue("--ins").trim(), elev: css.getPropertyValue("--elev").trim(),
+                none: css.getPropertyValue("--none").trim(), grid: css.getPropertyValue("--grid").trim(),
+                line: css.getPropertyValue("--line").trim() };
+    const maxV = niceMax(Math.max(...r.series.ins, ...r.series.elev, ...r.series.none) * 1.05);
+    const x = y => m.l + (W - m.l - m.r) * y / T;
+    const yv = v => H - m.b - (H - m.t - m.b) * v / maxV;
+
+    // grid + y ticks
+    for (let i = 0; i <= 5; i++) {
+      const v = maxV * i / 5;
+      el("line", { x1: m.l, x2: W - m.r, y1: yv(v), y2: yv(v), stroke: i === 0 ? C.line : C.grid, "stroke-width": 1 });
+      el("text", { x: m.l - 8, y: yv(v) + 4, "text-anchor": "end" }, short(v));
+    }
+    // x ticks
+    for (let y = 0; y <= T; y++) el("text", { x: x(y), y: H - m.b + 18, "text-anchor": "middle" }, y);
+    // axis titles
+    el("text", { x: m.l + (W - m.l - m.r) / 2, y: H - 8, "text-anchor": "middle", class: "axis-title" }, "Years after the decision");
+    const yt = el("text", { x: 16, y: m.t + (H - m.t - m.b) / 2, "text-anchor": "middle", class: "axis-title",
+                            transform: `rotate(-90 16 ${m.t + (H - m.t - m.b) / 2})` }, "Total cost so far (US $)");
+
+    // lines
+    const path = arr => arr.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + yv(v).toFixed(1)).join(" ");
+    el("path", { d: path(r.series.none), fill: "none", stroke: C.none, "stroke-width": 2.5, "stroke-dasharray": "6 5" });
+    el("path", { d: path(r.series.ins), fill: "none", stroke: C.ins, "stroke-width": 3.5, "stroke-linejoin": "round" });
+    el("path", { d: path(r.series.elev), fill: "none", stroke: C.elev, "stroke-width": 3.5, "stroke-linejoin": "round" });
+
+    // crossover marker within 10 years
+    if (r.breakeven > 0 && r.breakeven <= T) {
+      const cx = x(r.breakeven), cy = yv(r.series.ins[0] + r.insYear * r.breakeven);
+      el("circle", { cx, cy, r: 5, fill: "none", stroke: C.line, "stroke-width": 2 });
+      el("text", { x: cx, y: cy - 12, "text-anchor": "middle" }, "break-even ≈ yr " + r.breakeven.toFixed(1));
+    }
+
+    // end labels (avoid overlap)
+    const ends = [
+      { k: "ins", v: r.series.ins[T], c: C.ins },
+      { k: "elev", v: r.series.elev[T], c: C.elev },
+      { k: "none", v: r.series.none[T], c: C.none }
+    ].map(e => ({ ...e, y: yv(e.v) })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i-1].y < 18) ends[i].y = ends[i-1].y + 18;
+    ends.forEach(e => {
+      el("circle", { cx: x(T), cy: yv(e.v), r: 4, fill: e.c });
+      el("text", { x: x(T) + 10, y: e.y + 4, class: "end-label", fill: e.c, style: `fill:${e.c}` }, short(e.v));
+    });
+  }
+
+  // ---- Page update ----
+  function update() {
+    const r = model();
+    els.premium.disabled = els.link.checked;
+
+    $("premiumOut").textContent = money(r.prem) + " / yr";
+    $("premium10").textContent = money(r.prem * T);
+    $("elevCostOut").textContent = money(r.elev);
+    $("chanceOut").textContent = (r.p * 100).toFixed(1).replace(".0", "") + "%  (1 in " + Math.round(1 / r.p) + " years)";
+    $("depthOut").textContent = r.d.toFixed(1).replace(".0", "") + " ft";
+    $("damageHint").textContent = "about " + Math.round(damageFrac(r.d) * 100) + "% of the house, or " + money(r.L) + " in repairs";
+
+    const insLoss = r.p * T * r.insOOP, elevLoss = r.p * T * r.Lr, noneLoss = r.p * T * r.L;
+    const tot = { ins: r.series.ins[T], elev: r.series.elev[T], none: r.series.none[T] };
+    const set = (id, v) => $(id).textContent = typeof v === "number" ? money(v) : v;
+    set("t-ins-up", 0);           set("t-elev-up", r.elev);     set("t-none-up", 0);
+    set("t-ins-prem", r.prem*T);  set("t-elev-prem", 0);        set("t-none-prem", 0);
+    set("t-ins-loss", insLoss);   set("t-elev-loss", elevLoss); set("t-none-loss", noneLoss);
+    set("t-ins-one", r.insOOP);   set("t-elev-one", r.Lr);      set("t-none-one", r.L);
+    set("t-ins-tot", tot.ins);    set("t-elev-tot", tot.elev);  set("t-none-tot", tot.none);
+    ["t-ins-tot", "t-elev-tot"].forEach(id => $(id).classList.remove("best"));
+    $(tot.ins <= tot.elev ? "t-ins-tot" : "t-elev-tot").classList.add("best");
+
+    const diff = Math.abs(tot.ins - tot.elev);
+    const winner = tot.ins <= tot.elev
+      ? `<span class="ins">Buying insurance</span> is cheaper over 10 years, by about <b>${money(diff)}</b>.`
+      : `<span class="elev">Raising the house</span> is cheaper over 10 years, by about <b>${money(diff)}</b>.`;
+    let extra = "";
+    if (tot.ins <= tot.elev && isFinite(r.breakeven))
+      extra = ` But insurance keeps costing ${money(r.insYear)} every year, so raising the house would come out ahead after about <b>${Math.ceil(r.breakeven)} years</b>.`;
+    if (!els.link.checked && r.riskPremium > r.prem * 1.25)
+      extra += ` Note: at this flood risk, a risk-based premium would be about <b>${money(r.riskPremium)}/yr</b>. Check the box to see it.`;
+    $("verdict").innerHTML = winner + extra;
+
+    $("f-atleast").textContent = Math.round((1 - Math.pow(1 - r.p, T)) * 100) + "%";
+    $("f-onebill").textContent = money(r.L);
+    $("f-breakeven").textContent = !isFinite(r.breakeven) ? "never" : r.breakeven <= 0 ? "immediately" : "year " + Math.ceil(r.breakeven);
+
+    $("liveCalc").innerHTML =
+      `With your current settings: L = D(${r.d}) × $250,000 = ${money(r.L)}; Lr = D(${r.d} − 6) × $250,000 = ${money(r.Lr)}.<br>` +
+      `Insurance = ${money(r.prem)} × 10 + ${(r.p*100).toFixed(1)}% × 10 × ${money(r.insOOP)} = <b>${money(tot.ins)}</b>. ` +
+      `Raise house = ${money(r.elev)} + ${(r.p*100).toFixed(1)}% × 10 × ${money(r.Lr)} = <b>${money(tot.elev)}</b>. ` +
+      `Do nothing = ${(r.p*100).toFixed(1)}% × 10 × ${money(r.L)} = <b>${money(tot.none)}</b>.`;
+
+    draw(r);
+  }
+
+  Object.values(els).forEach(e => e.addEventListener("input", update));
+  els.link.addEventListener("change", update);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", update);
+  update();
+})();
+</script>
+</body>
+</html>
