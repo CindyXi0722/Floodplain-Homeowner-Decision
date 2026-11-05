@@ -4,11 +4,9 @@ An interactive widget that compares two ways a homeowner in a floodplain can pro
 
 **Live version:** https://cindyxi0722.github.io/Floodplain-Homeowner-Decision/
 
-This project illustrates course concepts of insurance and disaster recovery: insurance reduces financial loss and helps a family recover after a flood, while raising the house prevents much of the damage in the first place.
-
 Default values and slider ranges come from FEMA's National Flood Insurance Program (Risk Rating 2.0), published home-elevation cost estimates, and the U.S. Army Corps of Engineers depth-damage curves. Sources are listed on the page.
 
-Author: Cindy
+Created by: Cindy Xi,Jordan Scott,David Farrior.
 
 ## License
 MIT
